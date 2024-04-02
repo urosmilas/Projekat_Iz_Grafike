@@ -184,8 +184,10 @@ int main() {
 
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
+    stbi_set_flip_vertically_on_load(false);
+    Model ourModel("resources/objects/old_fashioned_lamppost/scene.gltf");
     ourModel.SetShaderTextureNamePrefix("material.");
+    stbi_set_flip_vertically_on_load(true);
 
     PointLight &pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -268,7 +270,7 @@ int main() {
 
 
 
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/awesomeface.png").c_str());
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str());
 
     planeShader.use();
     planeShader.setInt("texture1", 0);
@@ -329,9 +331,9 @@ int main() {
 
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+        model = glm::translate(model,programState->backpackPosition); // translate it down so it's at the center of the scene
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(programState->backpackScale)*0.1f);    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
@@ -339,9 +341,11 @@ int main() {
         planeShader.use();
         planeShader.setMat4("projection", projection);
         planeShader.setMat4("view", view);
-        glm::mat4 planeModel = glm::mat4(1.0f);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.0,5.0,0.0));
+        model = glm::scale(model, glm::vec3(10.0f));
 
-        planeShader.setMat4("planeModel", planeModel);
+        planeShader.setMat4("model", model);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
