@@ -1,0 +1,11 @@
+Model Information:
+* title:	Old Fashioned Lamppost
+* source:	https://sketchfab.com/3d-models/old-fashioned-lamppost-a58ad12fb9a24a10ba2328d6c18d8775
+* author:	pixelated_stars (https://sketchfab.com/pixelated_stars)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Old Fashioned Lamppost" (https://sketchfab.com/3d-models/old-fashioned-lamppost-a58ad12fb9a24a10ba2328d6c18d8775) by pixelated_stars (https://sketchfab.com/pixelated_stars) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
