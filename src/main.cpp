@@ -156,6 +156,13 @@ int main() {
         return -1;
     }
 
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    //glFrontFace(GL_CW);
+
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
 
@@ -280,6 +287,7 @@ int main() {
         ourShader.setMat4("view", view);
 
         // render the loaded model
+        glFrontFace(GL_CW);
         glm::mat4 model = glm::mat4(1.0f);
         //model = glm::translate(model,programState->objectPosition); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
@@ -354,6 +362,7 @@ void renderPlane()
             5.0f, -0.5f, -5.0f,  2.0f, 2.0f
     };
 
+    glDisable(GL_CULL_FACE);
     unsigned planeVBO, planeVAO;
     glGenVertexArrays(1, &planeVAO);
     glGenBuffers(1, &planeVBO);
@@ -371,7 +380,7 @@ void renderPlane()
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-
+    glEnable(GL_CULL_FACE);
 }
 
 
