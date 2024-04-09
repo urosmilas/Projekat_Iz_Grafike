@@ -447,13 +447,13 @@ void renderPlane()
 {
     float planeVertices[] = {
             // positions          // texture Coords
-            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+            5.0f, -0.5f,  5.0f,  1.0f, 0.0f,
             -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+            -5.0f, -0.5f, -5.0f,  0.0f, 1.0f,
 
-            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-            5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+            5.0f, -0.5f,  5.0f,  1.0f, 0.0f,
+            -5.0f, -0.5f, -5.0f,  0.0f, 1.0f,
+            5.0f, -0.5f, -5.0f,  1.0f, 1.0f
     };
 
     glDisable(GL_CULL_FACE);
@@ -602,6 +602,8 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(DOWN, deltaTime);
+
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -656,20 +658,20 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
 
-        if(ImGui::Button("Protanopia")) //{programState->ProtanopiaON = !programState->ProtanopiaON; programState->DeuteranopiaON = !programState->ProtanopiaON;programState->TritanopiaON = !programState->ProtanopiaON;}
-        {
+        if(ImGui::Button("Protanopia")){
             if(!programState->ProtanopiaON)
             {
                 programState->ProtanopiaON = true;
                 programState->DeuteranopiaON = false;
                 programState->TritanopiaON = false;
             }
+
             else
             {
                 programState->ProtanopiaON = false;
             }
-        }
-        ImGui::Text(programState->ProtanopiaON? "Ukljucena" : "Iskljucena");
+        }ImGui::SameLine();
+        ImGui::Text(programState->ProtanopiaON? "ON" : "OFF");ImGui::SameLine();
         if(ImGui::Button("Deuteranopia"))
         {
             if(!programState->DeuteranopiaON)
@@ -682,8 +684,8 @@ void DrawImGui(ProgramState *programState) {
             {
                 programState->DeuteranopiaON = false;
             }
-        }
-        ImGui::Text(programState->DeuteranopiaON? "Ukljucena" : "Iskljucena");
+        }ImGui::SameLine();
+        ImGui::Text(programState->DeuteranopiaON? "ON" : "OFF");ImGui::SameLine();
         if(ImGui::Button("Tritanopia"))
         {
             if(!programState->TritanopiaON)
@@ -696,8 +698,8 @@ void DrawImGui(ProgramState *programState) {
             {
                 programState->TritanopiaON = false;
             }
-        }
-        ImGui::Text(programState->TritanopiaON? "Ukljucena" : "Iskljucena");
+        }ImGui::SameLine();
+        ImGui::Text(programState->TritanopiaON? "ON" : "OFF");
 
         ImGui::End();
     }
@@ -725,6 +727,50 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         } else {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
+    }
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+        if(!programState->ProtanopiaON)
+        {
+            programState->ProtanopiaON = true;
+            programState->DeuteranopiaON = false;
+            programState->TritanopiaON = false;
+        }
+
+        else
+        {
+            programState->ProtanopiaON = false;
+        }
+    }
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+        if(!programState->DeuteranopiaON)
+        {
+            programState->ProtanopiaON = false;
+            programState->DeuteranopiaON = true;
+            programState->TritanopiaON = false;
+        }
+
+        else
+        {
+            programState->DeuteranopiaON = false;
+        }
+    }
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+        if(!programState->TritanopiaON)
+        {
+            programState->ProtanopiaON = false;
+            programState->DeuteranopiaON = false;
+            programState->TritanopiaON = true;
+        }
+
+        else
+        {
+            programState->TritanopiaON = false;
+        }
+    }
+    if (key == GLFW_KEY_0 && action == GLFW_PRESS) {
+        programState->ProtanopiaON = false;
+        programState->DeuteranopiaON = false;
+        programState->TritanopiaON = false;
     }
 }
 
