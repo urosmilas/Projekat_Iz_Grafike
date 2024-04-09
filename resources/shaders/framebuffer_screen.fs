@@ -4,26 +4,41 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
+uniform bool ProtanopiaON;
+uniform bool DeuteranopiaON;
+uniform bool TritanopiaON;
 
 const float offset =1.0 /300.0;
+const float gamma = 2.2f;
+
+//Transform from Linear RGB color space into LMS color space
+const mat3 TfromLRGBtoLMS = mat3(0.31399022, 0.63951294, 0.04649755,
+                                 0.15537241, 0.75789446, 0.08670142,
+                                 0.01775239, 0.10944209, 0.87256922);
+
+//Transform from LMS color space into Linear RGB color space
+const mat3 TfromLMStoLRGB = mat3(5.47221206, -4.6419601, 0.16963708,
+                                 -1.1252419, 2.29317094, -0.1678952,
+                                 0.02980165, -0.19318073, 1.16364789);
+// Matrix for converting into Protanomaly while ine LMS color space
+const mat3 Sp = mat3(0, 1.05118294, -0.05116099,
+                     0,     1,          0,
+                     0,     0,          1);
+
+// Matrix for converting into Deuteranomaly while ine LMS color space
+const mat3 Sd = mat3(1,     0,          0,
+                     0.9513092, 0,  0.04866992,
+                     0,     0,          1);
+
+// Matrix for converting into Protanomaly while ine LMS color space
+const mat3 St = mat3(1,     0,          0,
+                     0,     1,          0,
+                     -0.86744736, 1.86727089, 0);
 
 void main()
 {
 #if 0
-    vec3 col = texture(screenTexture, TexCoords).rgb; //mozda je ovde greska
-    FragColor =vec4(col, 1.0);
-#elif 0
-    FragColor = vec4(vec3(1.0 - texture(screenTexture, TexCoords)), 1.0);
-#elif 0
-    FragColor = texture(screenTexture, TexCoords);
-    float average =(0.2 * FragColor.r + 0.7 * FragColor.g + 0.07 * FragColor.b) / 3.0;
-    FragColor = vec4(average, average, average, 1.0);
-#elif 1 //deuterium? boja cudo
-//remove gama correction
-    vec3 col = texture(screenTexture, TexCoords).rgb;
-    FragColor = vec4(col.r, 0.95*col.r + 0.486*col.b, col.b, 1.0);
-#else
-    vec2 offsets[9] =vec2[](
+vec2 offsets[9] =vec2[](
         vec2(-offset, offset), // top/left
         vec2(0.0f, offset), // top-center
         vec2(offset, offset),
@@ -53,5 +68,45 @@ void main()
         col += sampleTex[i] * kernel[i];
     }
     FragColor = vec4(col, 1.0);
+
+#elif 0
+    FragColor = vec4(vec3(1.0 - texture(screenTexture, TexCoords)), 1.0);
+#elif 0
+    FragColor = texture(screenTexture, TexCoords);
+    float average =(0.2 * FragColor.r + 0.7 * FragColor.g + 0.07 * FragColor.b) / 3.0;
+    FragColor = vec4(average, average, average, 1.0);
+#else
+
+ if(ProtanopiaON)//Protanopia
+ {
+//remove gama correction
+    vec3 col = texture(screenTexture, TexCoords).rgb;
+    col =  col * TfromLMStoLRGB * Sp * TfromLRGBtoLMS;
+    //col = pow(col, 1/vec3(gamma));
+    FragColor = vec4(col, 1.0);
+
+   }
+else if(DeuteranopiaON) //Deuteranopia
+{
+//remove gama correction
+    vec3 col = texture(screenTexture, TexCoords).rgb;
+    col =  col * TfromLMStoLRGB * Sd * TfromLRGBtoLMS;
+    //col = pow(col, 1/vec3(gamma));
+    FragColor = vec4(col, 1.0);
+}
+else if(TritanopiaON) //Tritanopia
+{
+//remove gama correction
+    vec3 col = texture(screenTexture, TexCoords).rgb;
+    col =  col * TfromLMStoLRGB * St * TfromLRGBtoLMS;
+    FragColor = vec4(col, 1.0);
+
+}
+else
+{
+    vec3 col = texture(screenTexture, TexCoords).rgb; //mozda je ovde greska
+    //FragColor =vec4(ProtanopiaON, DeuteranopiaON, TritanopiaON, 1.0);
+    FragColor = vec4(col, 1.0);
+}
 #endif
 }

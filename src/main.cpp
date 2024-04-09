@@ -29,6 +29,7 @@ void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
 unsigned int loadTexture(char const * path);
+unsigned int loadTextureMonaLiza(char const * path);
 
 void renderPlane();
 void renderCube();
@@ -78,6 +79,9 @@ struct ProgramState {
     float objectScale = 1.0f;
     PointLight pointLight;
     DirectionLight dirLight;
+    bool ProtanopiaON = false;
+    bool DeuteranopiaON = false;
+    bool TritanopiaON = false;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
 
@@ -97,7 +101,10 @@ void ProgramState::SaveToFile(std::string filename) {
         << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
-        << camera.Front.z << '\n';
+        << camera.Front.z << '\n'
+        << ProtanopiaON<< '\n'
+        << DeuteranopiaON<< '\n'
+        << TritanopiaON<< '\n';
 }
 
 void ProgramState::LoadFromFile(std::string filename) {
@@ -112,7 +119,10 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
-           >> camera.Front.z;
+           >> camera.Front.z
+           >> ProtanopiaON
+           >> DeuteranopiaON
+           >> TritanopiaON;
     }
 }
 
@@ -247,8 +257,9 @@ int main() {
     */
 
 
-
+    //texture deo
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str());
+    unsigned int paintingTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
 
     planeShader.use();
     planeShader.setInt("texture1", 0);
@@ -256,6 +267,8 @@ int main() {
     screenShader.use();
     screenShader.setInt("screenTexture", 0);
 
+
+    //framebuffer deo
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -288,12 +301,9 @@ int main() {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
         // input
         // -----
         processInput(window);
-
-
         // render
         // ------
 
@@ -301,13 +311,11 @@ int main() {
         glEnable(GL_DEPTH_TEST);
 
 
-
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-
-        // don't forget to enable shader before setting uniforms
+        // ourShader deo
         ourShader.use();
         //pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
         pointLight.position = glm::vec3(0.0,9.6,0.0); // pokolapa se sa trenutnom pozicijom ulicne lampe
@@ -358,6 +366,23 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         renderPlane();
 
+        //render painting
+
+        planeShader.use();
+        planeShader.setMat4("projection", projection);
+        planeShader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.0,6.0,10.0));
+        model = glm::rotate(model, glm::radians(90.0f),glm::vec3(1.0, 0.0, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f , 1.49f));
+
+        //model = glm::scale(model, glm::vec3(1.0f, 10.49f, 1.0f));
+        planeShader.setMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, paintingTexture);
+        renderPlane();
+
 
         /*
         //render lightcube
@@ -387,6 +412,10 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         screenShader.use();
+
+        screenShader.setBool("ProtanopiaON", programState->ProtanopiaON);
+        screenShader.setBool("DeuteranopiaON", programState->DeuteranopiaON);
+        screenShader.setBool("TritanopiaON", programState->TritanopiaON);
         renderQuad(textureColorBuffer);
         /*  renderQuad
         glBindVertexArray(quadVAO);
@@ -626,6 +655,50 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
+
+        if(ImGui::Button("Protanopia")) //{programState->ProtanopiaON = !programState->ProtanopiaON; programState->DeuteranopiaON = !programState->ProtanopiaON;programState->TritanopiaON = !programState->ProtanopiaON;}
+        {
+            if(!programState->ProtanopiaON)
+            {
+                programState->ProtanopiaON = true;
+                programState->DeuteranopiaON = false;
+                programState->TritanopiaON = false;
+            }
+            else
+            {
+                programState->ProtanopiaON = false;
+            }
+        }
+        ImGui::Text(programState->ProtanopiaON? "Ukljucena" : "Iskljucena");
+        if(ImGui::Button("Deuteranopia"))
+        {
+            if(!programState->DeuteranopiaON)
+            {
+                programState->ProtanopiaON = false;
+                programState->DeuteranopiaON = true;
+                programState->TritanopiaON = false;
+            }
+            else
+            {
+                programState->DeuteranopiaON = false;
+            }
+        }
+        ImGui::Text(programState->DeuteranopiaON? "Ukljucena" : "Iskljucena");
+        if(ImGui::Button("Tritanopia"))
+        {
+            if(!programState->TritanopiaON)
+            {
+                programState->ProtanopiaON = false;
+                programState->DeuteranopiaON = false;
+                programState->TritanopiaON = true;
+            }
+            else
+            {
+                programState->TritanopiaON = false;
+            }
+        }
+        ImGui::Text(programState->TritanopiaON? "Ukljucena" : "Iskljucena");
+
         ImGui::End();
     }
 
@@ -678,6 +751,44 @@ unsigned int loadTexture(char const * path)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
+unsigned int loadTextureMonaLiza(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_CLAMP_TO_BORDER); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
