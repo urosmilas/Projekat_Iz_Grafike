@@ -4,6 +4,10 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
+//bloom
+uniform sampler2D bloomBlurTexture;
+
+
 uniform bool ProtanopiaON;
 uniform bool DeuteranopiaON;
 uniform bool TritanopiaON;
@@ -107,17 +111,24 @@ else if(TritanopiaON) //Tritanopia
 }
 else
 {
-    vec3 col = texture(screenTexture, TexCoords).rgb;
+    //vec2 tex_offset = 1.0 / textureSize(screenTexture, 0);
+    //vec2 koord = TexCoords + tex_offset*(-250, -250);
+    vec3 col        = texture(screenTexture, TexCoords).rgb;
+    //vec3 bloomColor = texture(bloomBlurTexture, koord).rgb;
+    vec3 bloomColor = texture(bloomBlurTexture, TexCoords).rgb;
     if(hdrAndBloom)
     {
-        vec3 result = vec3(1.0) - exp(-col*exposure);
-        result = pow(result, vec3(1.0/gamma));
-        FragColor = vec4(result,1.0);
+        col+=bloomColor;
+
     }
-    else{
-        col = pow(col, vec3(1.0 / gamma));
-        FragColor = vec4(col, 1.0);
-    }
+    col = vec3(1.0) - exp(-col*exposure);
+    col = pow(col, vec3(1.0 / gamma));
+    FragColor = vec4(col, 1.0);
+
+
+
+
+
 
 }
 #endif
