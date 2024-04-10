@@ -38,6 +38,10 @@ void renderQuad(unsigned int textureColorBuffer);
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
+bool hdr = false;
+bool hdrKeyPressed = false;
+float exposure = 1.0f;
+
 
 
 // camera
@@ -256,6 +260,9 @@ int main() {
 
     */
 
+    //hdr deo
+    unsigned int hdrFBO;
+
 
     //texture deo
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str());
@@ -275,15 +282,18 @@ int main() {
     unsigned int textureColorBuffer;
     glGenTextures(1, &textureColorBuffer);
     glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         cout<<"ERROR::FRAMEBUFFER:: Frambuffer nije zavrsen" <<endl;
@@ -416,6 +426,8 @@ int main() {
         screenShader.setBool("ProtanopiaON", programState->ProtanopiaON);
         screenShader.setBool("DeuteranopiaON", programState->DeuteranopiaON);
         screenShader.setBool("TritanopiaON", programState->TritanopiaON);
+        screenShader.setBool("hdr", hdr);
+        screenShader.setFloat("exposure", exposure);
         renderQuad(textureColorBuffer);
         /*  renderQuad
         glBindVertexArray(quadVAO);
@@ -602,6 +614,17 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(DOWN, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    {
+        exposure -= 0.001f;
+        exposure = max(exposure, 0.0f);
+        cout<<exposure;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+    {
+        exposure += 0.001f;
+
+    }
 
 
 }
@@ -700,6 +723,9 @@ void DrawImGui(ProgramState *programState) {
             }
         }ImGui::SameLine();
         ImGui::Text(programState->TritanopiaON? "ON" : "OFF");
+        if(ImGui::Button("Hdr")){hdr=!hdr;}ImGui::SameLine();
+        ImGui::Text((hdr? "ON" : "OFF"));ImGui::SameLine();
+        ImGui::Text("Exposure %f", &exposure);
 
         ImGui::End();
     }
@@ -772,6 +798,11 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         programState->DeuteranopiaON = false;
         programState->TritanopiaON = false;
     }
+    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        hdr = !hdr;
+    }
+
 }
 
 unsigned int loadTexture(char const * path)

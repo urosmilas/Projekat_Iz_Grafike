@@ -7,9 +7,12 @@ uniform sampler2D screenTexture;
 uniform bool ProtanopiaON;
 uniform bool DeuteranopiaON;
 uniform bool TritanopiaON;
+uniform bool hdr;
+uniform float exposure;
 
 const float offset =1.0 /300.0;
-const float gamma = 2.2f;
+const float gamma = 2.2;
+
 
 //Transform from Linear RGB color space into LMS color space
 const mat3 TfromLRGBtoLMS = mat3(0.31399022, 0.63951294, 0.04649755,
@@ -105,8 +108,18 @@ else if(TritanopiaON) //Tritanopia
 else
 {
     vec3 col = texture(screenTexture, TexCoords).rgb; //mozda je ovde greska
-    //FragColor =vec4(ProtanopiaON, DeuteranopiaON, TritanopiaON, 1.0);
-    FragColor = vec4(col, 1.0);
+    if(hdr)
+    {
+        vec3 result = vec3(1.0) - exp(-col*exposure);
+        result = pow(result, vec3(1.0/gamma));
+        FragColor = vec4(result,1.0);
+    }
+    else{
+        col = pow(col, vec3(1.0 / gamma));
+        //TODO Turn off gamma correction for mona lisa
+        FragColor = vec4(col, 1.0);
+    }
+
 }
 #endif
 }
