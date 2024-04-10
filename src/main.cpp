@@ -28,8 +28,8 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
-unsigned int loadTexture(char const * path);
-unsigned int loadTextureMonaLiza(char const * path);
+unsigned int loadTexture(char const * path, bool gammaCorrection, bool unpackAlligment);
+//unsigned int loadTextureMonaLiza(char const * path);
 
 void renderPlane(bool FaceCulling);
 void renderCube();
@@ -38,8 +38,7 @@ void renderQuad(unsigned int textureColorBuffer);
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-bool hdr = false;
-bool hdrKeyPressed = false;
+bool hdrAndBloom = false;
 float exposure = 1.0f;
 
 
@@ -265,13 +264,14 @@ int main() {
 
     */
 
-    //hdr deo
+    //hdrAndBloom deo
     unsigned int hdrFBO;
 
 
     //texture deo
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str());
-    unsigned int paintingTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str(), false, false);
+    //unsigned int paintingTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
+    unsigned int paintingTexture = loadTexture(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str(), true, true);
 
     planeShader.use();
     planeShader.setInt("texture1", 0);
@@ -431,7 +431,7 @@ int main() {
         screenShader.setBool("ProtanopiaON", programState->ProtanopiaON);
         screenShader.setBool("DeuteranopiaON", programState->DeuteranopiaON);
         screenShader.setBool("TritanopiaON", programState->TritanopiaON);
-        screenShader.setBool("hdr", hdr);
+        screenShader.setBool("hdrAndBloom", hdrAndBloom);
         screenShader.setFloat("exposure", exposure);
         renderQuad(textureColorBuffer);
         /*  renderQuad
@@ -624,12 +624,10 @@ void processInput(GLFWwindow *window) {
     {
         exposure -= 0.001f;
         exposure = max(exposure, 0.0f);
-        cout<<exposure;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
     {
         exposure += 0.001f;
-
     }
 
 
@@ -729,9 +727,9 @@ void DrawImGui(ProgramState *programState) {
             }
         }ImGui::SameLine();
         ImGui::Text(programState->TritanopiaON? "ON" : "OFF");
-        if(ImGui::Button("Hdr")){hdr=!hdr;}ImGui::SameLine();
-        ImGui::Text((hdr? "ON" : "OFF"));ImGui::SameLine();
-        ImGui::Text("Exposure %f", &exposure);
+        if(ImGui::Button("Hdr")){ hdrAndBloom=!hdrAndBloom;}ImGui::SameLine();
+        ImGui::Text((hdrAndBloom ? "ON" : "OFF"));ImGui::SameLine();
+        ImGui::Text("Exposure: %f", exposure);
 
         ImGui::End();
     }
@@ -806,12 +804,12 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_H && action == GLFW_PRESS)
     {
-        hdr = !hdr;
+        hdrAndBloom = !hdrAndBloom;
     }
 
 }
 
-unsigned int loadTexture(char const * path)
+unsigned int loadTexture(char const * path, bool gammaCorrection, bool unpackAlligment)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -820,20 +818,31 @@ unsigned int loadTexture(char const * path)
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
-        GLenum format;
+        GLenum internalFormat;
+        GLenum dataFormat;
         if (nrComponents == 1)
-            format = GL_RED;
+        {
+            dataFormat = internalFormat = GL_RED;
+        }
+
         else if (nrComponents == 3)
-            format = GL_RGB;
+        {
+            internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+            dataFormat = GL_RGB;
+        }
         else if (nrComponents == 4)
-            format = GL_RGBA;
+        {
+            internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+            dataFormat = GL_RGBA;
+        }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        if(unpackAlligment)  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,  GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,  GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -848,7 +857,7 @@ unsigned int loadTexture(char const * path)
     return textureID;
 }
 
-unsigned int loadTextureMonaLiza(char const * path)
+/*unsigned int loadTextureMonaLiza(char const * path)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -856,7 +865,7 @@ unsigned int loadTextureMonaLiza(char const * path)
     int width, height, nrComponents;
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
-    {
+    {*/
         /*GLenum format;
         if (nrComponents == 1)
             format = GL_RED;
@@ -865,7 +874,7 @@ unsigned int loadTextureMonaLiza(char const * path)
         else if (nrComponents == 4)
             format = GL_RGBA;
     */
-        glBindTexture(GL_TEXTURE_2D, textureID);
+       /* glBindTexture(GL_TEXTURE_2D, textureID);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -885,3 +894,4 @@ unsigned int loadTextureMonaLiza(char const * path)
 
     return textureID;
 }
+*/

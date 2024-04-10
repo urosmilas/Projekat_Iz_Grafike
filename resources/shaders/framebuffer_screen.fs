@@ -7,7 +7,7 @@ uniform sampler2D screenTexture;
 uniform bool ProtanopiaON;
 uniform bool DeuteranopiaON;
 uniform bool TritanopiaON;
-uniform bool hdr;
+uniform bool hdrAndBloom;
 uniform float exposure;
 
 const float offset =1.0 /300.0;
@@ -108,7 +108,7 @@ else if(TritanopiaON) //Tritanopia
 else
 {
     vec3 col = texture(screenTexture, TexCoords).rgb;
-    if(hdr)
+    if(hdrAndBloom)
     {
         vec3 result = vec3(1.0) - exp(-col*exposure);
         result = pow(result, vec3(1.0/gamma));
