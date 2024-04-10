@@ -107,7 +107,7 @@ else if(TritanopiaON) //Tritanopia
 }
 else
 {
-    vec3 col = texture(screenTexture, TexCoords).rgb; //mozda je ovde greska
+    vec3 col = texture(screenTexture, TexCoords).rgb;
     if(hdr)
     {
         vec3 result = vec3(1.0) - exp(-col*exposure);
@@ -116,7 +116,6 @@ else
     }
     else{
         col = pow(col, vec3(1.0 / gamma));
-        //TODO Turn off gamma correction for mona lisa
         FragColor = vec4(col, 1.0);
     }
 

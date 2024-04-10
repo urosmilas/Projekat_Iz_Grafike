@@ -31,7 +31,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 unsigned int loadTexture(char const * path);
 unsigned int loadTextureMonaLiza(char const * path);
 
-void renderPlane();
+void renderPlane(bool FaceCulling);
 void renderCube();
 void renderQuad(unsigned int textureColorBuffer);
 
@@ -143,6 +143,8 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    //msaa
+    glfwWindowHint(GLFW_SAMPLES, 4);
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -173,6 +175,9 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+    //msaa
+    glEnable(GL_MULTISAMPLE);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
@@ -374,7 +379,7 @@ int main() {
         planeShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
-        renderPlane();
+        renderPlane(false);
 
         //render painting
 
@@ -384,15 +389,15 @@ int main() {
         model = glm::mat4(1.0f);
         model = glm::translate(model,glm::vec3(0.0,6.0,10.0));
         model = glm::rotate(model, glm::radians(90.0f),glm::vec3(1.0, 0.0, 0.0));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0,0.0,1.0));
         model = glm::scale(model, glm::vec3(0.5f));
         model = glm::scale(model, glm::vec3(1.0f, 1.0f , 1.49f));
-
-        //model = glm::scale(model, glm::vec3(1.0f, 10.49f, 1.0f));
         planeShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, paintingTexture);
-        renderPlane();
-
+        glFrontFace(GL_CCW);
+        renderPlane(true);
+        glFrontFace(GL_CW);
 
         /*
         //render lightcube
@@ -455,7 +460,7 @@ int main() {
 }
 
 
-void renderPlane()
+void renderPlane(bool FaceCulling)
 {
     float planeVertices[] = {
             // positions          // texture Coords
@@ -468,7 +473,7 @@ void renderPlane()
             5.0f, -0.5f, -5.0f,  1.0f, 1.0f
     };
 
-    glDisable(GL_CULL_FACE);
+    if(!FaceCulling) glDisable(GL_CULL_FACE);
     unsigned planeVBO, planeVAO;
     glGenVertexArrays(1, &planeVAO);
     glGenBuffers(1, &planeVBO);
@@ -579,6 +584,7 @@ void renderQuad(unsigned int textureColorBuffer)
             1.0f,  1.0f,  1.0f, 1.0f
     };
 
+    glFrontFace(GL_CW);
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
@@ -851,21 +857,21 @@ unsigned int loadTextureMonaLiza(char const * path)
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
-        GLenum format;
+        /*GLenum format;
         if (nrComponents == 1)
             format = GL_RED;
         else if (nrComponents == 3)
-            format = GL_RGB;
+        {format = GL_RGB; std::cout<<"RGB";}
         else if (nrComponents == 4)
             format = GL_RGBA;
-
+    */
         glBindTexture(GL_TEXTURE_2D, textureID);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_CLAMP_TO_BORDER); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,  GL_CLAMP_TO_BORDER); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,  GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
