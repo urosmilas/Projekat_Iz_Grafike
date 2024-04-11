@@ -11,7 +11,7 @@ uniform sampler2D bloomBlurTexture;
 uniform bool ProtanopiaON;
 uniform bool DeuteranopiaON;
 uniform bool TritanopiaON;
-uniform bool hdrAndBloom;
+uniform bool Bloom;
 uniform float exposure;
 
 const float offset =1.0 /300.0;
@@ -116,7 +116,7 @@ else
     vec3 col        = texture(screenTexture, TexCoords).rgb;
     //vec3 bloomColor = texture(bloomBlurTexture, koord).rgb;
     vec3 bloomColor = texture(bloomBlurTexture, TexCoords).rgb;
-    if(hdrAndBloom)
+    if(Bloom)
     {
         col+=bloomColor;
 
@@ -124,6 +124,7 @@ else
     col = vec3(1.0) - exp(-col*exposure);
     col = pow(col, vec3(1.0 / gamma));
     FragColor = vec4(col, 1.0);
+    //FragColor = vec4(bloomColor, 1.0);
 
 
 

@@ -34,11 +34,23 @@ unsigned int loadTexture(char const * path, bool gammaCorrection, bool unpackAll
 void renderPlane(bool FaceCulling);
 void renderCube();
 void renderQuad();
+void renderGlassPane();
 
 // settings
-const unsigned int SCR_WIDTH = 1920;
-const unsigned int SCR_HEIGHT = 1080;
-bool hdrAndBloom = false;
+//const unsigned int SCR_WIDTH = 1920;
+//const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+unsigned int globalWidth = SCR_WIDTH;
+unsigned int globalHeight = SCR_HEIGHT;
+
+unsigned int textureColorBuffers[2];
+unsigned int pingpongColorBuffers[2];
+unsigned int rboDepth;
+
+
+
+bool Bloom = false;
 float exposure = 1.0f;
 
 
@@ -151,7 +163,7 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(globalWidth, globalHeight, "LearnOpenGL", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -180,7 +192,9 @@ int main() {
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
-    //glFrontFace(GL_CW);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
@@ -208,6 +222,7 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader lightCubeShader("resources/shaders/lightCube.vs", "resources/shaders/lightCube.fs");
+    Shader transparentShader("resources/shaders/transparent.vs", "resources/shaders/transparent.fs");
     Shader planeShader("resources/shaders/plane.vs", "resources/shaders/plane.fs");
     Shader blurShader("resources/shaders/blur.vs", "resources/shaders/blur.fs");
     Shader screenShader("resources/shaders/framebuffer_screen.vs", "resources/shaders/framebuffer_screen.fs");
@@ -216,6 +231,7 @@ int main() {
     // -----------
     stbi_set_flip_vertically_on_load(false);
     Model ourModel("resources/objects/old_fashioned_lamppost/scene.gltf");
+    Model podModel("resources/objects/marble_floor/scene.gltf");
     ourModel.SetShaderTextureNamePrefix("material.");
     stbi_set_flip_vertically_on_load(true);
 
@@ -230,31 +246,48 @@ int main() {
     pointLight.quadratic = 0.032f;
 
     DirectionLight &dirLight = programState->dirLight;
-    dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
+    dirLight.direction = glm::vec3(0.0f, -1.0f, 0.5f);
  /*dirLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
     dirLight.diffuse = glm::vec3(0.4, 0.4, 0.4);
     dirLight.specular = glm::vec3(1.0, 1.0, 1.0);*/
-    dirLight.ambient = glm::vec3(0.0f, 0.0f, 0.0f);
+    dirLight.ambient = glm::vec3(0.01f, 0.01f, 0.01f);
     dirLight.diffuse = glm::vec3(0.0, 0.0, 0.0);
     dirLight.specular = glm::vec3(0.0, 0.0, 0.0);
 
     glm::vec3 lightPos = glm::vec3(10.0, 10.0, 10.0);
 
 
-    //hdrAndBloom deo
+    //Bloom deo
     unsigned int hdrFBO;
 
 
     //texture deo
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str(), false, false);
-    //unsigned int paintingTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
-    unsigned int paintingTexture = loadTexture(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str(), true, true);
+    //unsigned int paintingMonaLisaTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
+    unsigned int paintingMonaLisaTexture = loadTexture(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str(), true, true);
+    unsigned int paintingStarryNightTexture = loadTexture(FileSystem::getPath("resources/textures/StarryNight1280x1014.jpg").c_str(), true, true);
+    unsigned int paintingIrisesInMonetsTexture = loadTexture(FileSystem::getPath("resources/textures/IrisesInMonets1441x1200.jpg").c_str(), true, true);
+
+
+    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/prozor1.png").c_str(), true, false);
+
+    vector<glm::vec3> transparentObjects
+            {
+                    glm::vec3(-5.0f, 6.0f, -5.0f),
+                    glm::vec3( 0.0f, 6.0f, -5.0f)
+
+            };
+
+
 
     planeShader.use();
     planeShader.setInt("texture1", 0);
 
     blurShader.use();
     blurShader.setInt("image", 0);
+
+    transparentShader.use();
+    transparentShader.setInt("texture1", 0);
 
     screenShader.use();
     screenShader.setInt("screenTexture", 0);
@@ -267,25 +300,24 @@ int main() {
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    unsigned int textureColorBuffers[2];
     glGenTextures(2, textureColorBuffers);
 
     //bloom for petlja
     for(int i=0; i<2; ++i) {
         glBindTexture(GL_TEXTURE_2D, textureColorBuffers[i]);
-        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, globalWidth, globalHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, globalWidth, globalHeight, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textureColorBuffers[i], 0);
     }
-    unsigned int rboDepth;
+
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, globalWidth, globalHeight);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, globalWidth, globalHeight);
     //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
     //bloom
@@ -300,7 +332,7 @@ int main() {
 
     // ping pong framebufferi za blur
     unsigned int pingpongFBO[2];
-    unsigned int pingpongColorBuffers[2];
+
     glGenFramebuffers(2, pingpongFBO);
     glGenTextures(2,pingpongColorBuffers);
 
@@ -308,7 +340,7 @@ int main() {
     {
         glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
         glBindTexture(GL_TEXTURE_2D, pingpongColorBuffers[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, globalWidth, globalHeight, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -337,6 +369,13 @@ int main() {
         processInput(window);
         // render
         // ------
+
+        std::sort(transparentObjects.begin(), transparentObjects.end(),
+                  [cameraPosition = programState->camera.Position](const glm::vec3& a, const glm::vec3& b) {
+                      float d1 = glm::distance(a, cameraPosition);
+                      float d2 = glm::distance(b, cameraPosition);
+                      return d1 > d2;
+                  });
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glEnable(GL_DEPTH_TEST);
@@ -371,7 +410,7 @@ int main() {
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+                                                (float) globalWidth / (float) globalHeight, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
@@ -385,7 +424,15 @@ int main() {
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,programState->objectPosition); // translate it down so it's at the center of the scene
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.5f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        podModel.Draw(ourShader);
+
         //render plane
+        /*
         planeShader.use();
         planeShader.setMat4("projection", projection);
         planeShader.setMat4("view", view);
@@ -395,9 +442,9 @@ int main() {
         planeShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
-        renderPlane(false);
+        renderPlane(false);*/
 
-        //render painting
+        //render paintings
 
         planeShader.use();
         planeShader.setMat4("projection", projection);
@@ -410,14 +457,56 @@ int main() {
         model = glm::scale(model, glm::vec3(1.0f, 1.0f , 1.49f));
         planeShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, paintingTexture);
+        glBindTexture(GL_TEXTURE_2D, paintingMonaLisaTexture);
         glFrontFace(GL_CCW);
         renderPlane(true);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(10.0,6.0,10.0));
+        model = glm::rotate(model, glm::radians(90.0f),glm::vec3(1.0, 0.0, 0.0));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0,0.0,1.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f , 1.262327416f));
+        planeShader.setMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, paintingStarryNightTexture);
+        renderPlane(true);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(-10.0,6.0,10.0));
+        model = glm::rotate(model, glm::radians(90.0f),glm::vec3(1.0, 0.0, 0.0));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0,0.0,1.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f , 1.200833333f));
+        planeShader.setMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, paintingIrisesInMonetsTexture);
+        renderPlane(true);
+
+
         glFrontFace(GL_CW);
+
+        transparentShader.use();
+        transparentShader.setMat4("projection",  projection);
+        transparentShader.setMat4("view",  view);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
+
+        for(const glm::vec3& objectPos : transparentObjects)
+        {
+            model = glm::mat4(1.0);
+            model = glm::translate(model, objectPos );
+            model = glm::scale(model, glm::vec3(5.0f));
+            transparentShader.setMat4("model", model);
+            transparentShader.setBool("IsRed", objectPos.x >= 0);
+            renderGlassPane();
+
+
+        }
+
 
 
         //render lightcube
-        lightCubeShader.use();
+        /*lightCubeShader.use();
         lightCubeShader.setMat4("projection", projection);
         lightCubeShader.setMat4("view", view);
         lightCubeShader.setVec3("lightColor", glm::vec3 (10.0,0.0,0.0));
@@ -429,7 +518,7 @@ int main() {
         lightCubeShader.setMat4("model", model);
 
         renderCube();
-
+        */
 
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -472,7 +561,7 @@ int main() {
         screenShader.setBool("ProtanopiaON", programState->ProtanopiaON);
         screenShader.setBool("DeuteranopiaON", programState->DeuteranopiaON);
         screenShader.setBool("TritanopiaON", programState->TritanopiaON);
-        screenShader.setBool("hdrAndBloom", hdrAndBloom);
+        screenShader.setBool("Bloom", Bloom);
         screenShader.setFloat("exposure", exposure);
 
         glActiveTexture(GL_TEXTURE0);
@@ -645,6 +734,42 @@ void renderQuad()
 
 }
 
+unsigned int glassPaneVAO = 0, glassPaneVBO;
+void renderGlassPane()
+{
+    if(glassPaneVAO == 0) {
+        float glassPaneVertices[] = {
+                // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+                0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+                0.0f, -0.5f,  0.0f,  0.0f,  2.0f,
+                1.0f, -0.5f,  0.0f,  2.0f,  2.0f,
+
+                0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+                1.0f, -0.5f,  0.0f,  2.0f,  2.0f,
+                1.0f,  0.5f,  0.0f,  2.0f,  0.0f
+        };
+
+
+
+        glGenVertexArrays(1, &glassPaneVAO);
+        glGenBuffers(1, &glassPaneVBO);
+        glBindVertexArray(glassPaneVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, glassPaneVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glassPaneVertices), &glassPaneVertices, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    }
+
+    glDisable(GL_CULL_FACE);
+    glBindVertexArray(glassPaneVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    glEnable(GL_CULL_FACE);
+
+}
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
@@ -681,6 +806,23 @@ void processInput(GLFWwindow *window) {
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
+    globalWidth = width;
+    globalHeight = height;
+    //hdr
+    for (unsigned int i = 0; i < 2; i++) {
+        glBindTexture(GL_TEXTURE_2D, textureColorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, globalWidth, globalHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    }
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, globalWidth, globalHeight);
+
+    //bloom
+    for (unsigned int i = 0; i < 2; i++) {
+        glBindTexture(GL_TEXTURE_2D, pingpongColorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, globalWidth, globalHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    }
+
+
     glViewport(0, 0, width, height);
 }
 
@@ -734,6 +876,7 @@ void DrawImGui(ProgramState *programState) {
                 programState->ProtanopiaON = true;
                 programState->DeuteranopiaON = false;
                 programState->TritanopiaON = false;
+                Bloom = false;
             }
 
             else
@@ -749,6 +892,7 @@ void DrawImGui(ProgramState *programState) {
                 programState->ProtanopiaON = false;
                 programState->DeuteranopiaON = true;
                 programState->TritanopiaON = false;
+                Bloom = false;
             }
             else
             {
@@ -763,6 +907,7 @@ void DrawImGui(ProgramState *programState) {
                 programState->ProtanopiaON = false;
                 programState->DeuteranopiaON = false;
                 programState->TritanopiaON = true;
+                Bloom = false;
             }
             else
             {
@@ -770,8 +915,8 @@ void DrawImGui(ProgramState *programState) {
             }
         }ImGui::SameLine();
         ImGui::Text(programState->TritanopiaON? "ON" : "OFF");
-        if(ImGui::Button("Hdr")){ hdrAndBloom=!hdrAndBloom;}ImGui::SameLine();
-        ImGui::Text((hdrAndBloom ? "ON" : "OFF"));ImGui::SameLine();
+        if(ImGui::Button("Bloom")){ Bloom=!Bloom;}ImGui::SameLine();
+        ImGui::Text((Bloom ? "ON" : "OFF"));ImGui::SameLine();
         ImGui::Text("Exposure: %f", exposure);
 
         ImGui::End();
@@ -807,6 +952,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->ProtanopiaON = true;
             programState->DeuteranopiaON = false;
             programState->TritanopiaON = false;
+            Bloom = false;
         }
 
         else
@@ -820,6 +966,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->ProtanopiaON = false;
             programState->DeuteranopiaON = true;
             programState->TritanopiaON = false;
+            Bloom = false;
         }
 
         else
@@ -833,6 +980,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->ProtanopiaON = false;
             programState->DeuteranopiaON = false;
             programState->TritanopiaON = true;
+            Bloom = false;
         }
 
         else
@@ -845,9 +993,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         programState->DeuteranopiaON = false;
         programState->TritanopiaON = false;
     }
-    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    if (key == GLFW_KEY_B && action == GLFW_PRESS)
     {
-        hdrAndBloom = !hdrAndBloom;
+        Bloom = !Bloom;
     }
 
 }

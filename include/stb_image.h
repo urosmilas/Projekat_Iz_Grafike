@@ -73,7 +73,7 @@ variable.
 
 - Split existing STBI_NO_HDR flag into two flags, STBI_NO_HDR and
 STBI_NO_LINEAR.
-STBI_NO_HDR:     suppress implementation of .hdrAndBloom reader format
+STBI_NO_HDR:     suppress implementation of .Bloom reader format
 STBI_NO_LINEAR:  suppress high-dynamic-range light-linear float API
 
 - You can suppress implementation of any of the decoders to reduce
@@ -166,7 +166,7 @@ See end of file for full revision history.
 
 Image formats                          Extensions, features
 Sean Barrett (jpeg, png, bmp)          Jetro Lauha (stbi_info)
-Nicolas Schulz (hdrAndBloom, psd)              Martin "SpartanJ" Golini (stbi_info)
+Nicolas Schulz (Bloom, psd)              Martin "SpartanJ" Golini (stbi_info)
 Jonathan Dummer (tga)                  James "moose2000" Brown (iPhone PNG)
 Jean-Marc Lienher (gif)                Ben "Disch" Wenger (io callbacks)
 Tom Seddon (pic)                       Omar Cornut (1/2/4-bit PNG)
@@ -1059,8 +1059,8 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
 
 #ifndef STBI_NO_HDR
     if (stbi__hdr_test(s)) {
-        float *hdrAndBloom = stbi__hdr_load(s, x, y, comp, req_comp, ri);
-        return stbi__hdr_to_ldr(hdrAndBloom, *x, *y, req_comp ? req_comp : *comp);
+        float *Bloom = stbi__hdr_load(s, x, y, comp, req_comp, ri);
+        return stbi__hdr_to_ldr(Bloom, *x, *y, req_comp ? req_comp : *comp);
     }
 #endif
 
@@ -1335,7 +1335,7 @@ STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_
 
 #endif // !STBI_NO_LINEAR
 
-// these is-hdrAndBloom-or-not is defined independent of whether STBI_NO_LINEAR is
+// these is-Bloom-or-not is defined independent of whether STBI_NO_LINEAR is
 // defined, for API simplicity; if STBI_NO_LINEAR is defined, it always
 // reports false!
 
@@ -7042,7 +7042,7 @@ read 16-bit PNGs (only as 8-bit)
 2.10  (2016-01-22) avoid warning introduced in 2.09 by STBI_REALLOC_SIZED
 2.09  (2016-01-16) allow comments in PNM files
 16-bit-per-pixel TGA (not bit-per-component)
-info() for TGA could break due to .hdrAndBloom handling
+info() for TGA could break due to .Bloom handling
 info() for BMP to shares code instead of sloppy parse
 can use STBI_REALLOC_SIZED if allocator doesn't support realloc
 code cleanup
