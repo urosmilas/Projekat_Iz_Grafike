@@ -34,6 +34,7 @@ unsigned int loadTexture(char const * path, bool gammaCorrection, bool unpackAll
 void renderPlane(bool FaceCulling);
 void renderCube();
 void renderQuad();
+void renderNewPlane();
 void renderGlassPane();
 
 // settings
@@ -86,12 +87,12 @@ struct DirectionLight {
 
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0);
+    glm::vec3 lightGUIColor = glm::vec3(0);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
     glm::vec3 objectPosition = glm::vec3(0.0f);
-    float objectScale = 1.0f;
+    float lightIntensity = 3.0f;
     PointLight pointLight;
     DirectionLight dirLight;
     bool ProtanopiaON = false;
@@ -107,9 +108,9 @@ struct ProgramState {
 
 void ProgramState::SaveToFile(std::string filename) {
     std::ofstream out(filename);
-    out << clearColor.r << '\n'
-        << clearColor.g << '\n'
-        << clearColor.b << '\n'
+    out << lightGUIColor.r << '\n'
+        << lightGUIColor.g << '\n'
+        << lightGUIColor.b << '\n'
         << ImGuiEnabled << '\n'
         << camera.Position.x << '\n'
         << camera.Position.y << '\n'
@@ -125,9 +126,9 @@ void ProgramState::SaveToFile(std::string filename) {
 void ProgramState::LoadFromFile(std::string filename) {
     std::ifstream in(filename);
     if (in) {
-        in >> clearColor.r
-           >> clearColor.g
-           >> clearColor.b
+        in >> lightGUIColor.r
+           >> lightGUIColor.g
+           >> lightGUIColor.b
            >> ImGuiEnabled
            >> camera.Position.x
            >> camera.Position.y
@@ -224,6 +225,7 @@ int main() {
     Shader lightCubeShader("resources/shaders/lightCube.vs", "resources/shaders/lightCube.fs");
     Shader transparentShader("resources/shaders/transparent.vs", "resources/shaders/transparent.fs");
     Shader planeShader("resources/shaders/plane.vs", "resources/shaders/plane.fs");
+    Shader novaRavanShader("resources/shaders/novaRavan.vs", "resources/shaders/novaRavan.fs");
     Shader blurShader("resources/shaders/blur.vs", "resources/shaders/blur.fs");
     Shader screenShader("resources/shaders/framebuffer_screen.vs", "resources/shaders/framebuffer_screen.fs");
 
@@ -231,14 +233,18 @@ int main() {
     // -----------
     stbi_set_flip_vertically_on_load(false);
     Model ourModel("resources/objects/old_fashioned_lamppost/scene.gltf");
+    Model LampaModel("resources/objects/street_lantern__game_ready__4k/scene.gltf");
     Model podModel("resources/objects/marble_floor/scene.gltf");
+    Model kanapModel("resources/objects/velvet_rope_and_metal_poles/scene.gltf");
     ourModel.SetShaderTextureNamePrefix("material.");
+    podModel.SetShaderTextureNamePrefix("material.");
+    kanapModel.SetShaderTextureNamePrefix("material.");
     stbi_set_flip_vertically_on_load(true);
 
     PointLight &pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.diffuse = glm::vec3(1.6, 20.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1.0f;
@@ -262,7 +268,7 @@ int main() {
 
 
     //texture deo
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/container.jpg").c_str(), false, false);
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/MarbleFloor.jpg").c_str(), false, false);
     //unsigned int paintingMonaLisaTexture = loadTextureMonaLiza(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str());
     unsigned int paintingMonaLisaTexture = loadTexture(FileSystem::getPath("resources/textures/MonaLiza1374x2048.jpg").c_str(), true, true);
     unsigned int paintingStarryNightTexture = loadTexture(FileSystem::getPath("resources/textures/StarryNight1280x1014.jpg").c_str(), true, true);
@@ -288,6 +294,9 @@ int main() {
 
     transparentShader.use();
     transparentShader.setInt("texture1", 0);
+
+    novaRavanShader.use();
+    novaRavanShader.setInt("diffuseTexture", 0);
 
     screenShader.use();
     screenShader.setInt("screenTexture", 0);
@@ -381,14 +390,18 @@ int main() {
         glEnable(GL_DEPTH_TEST);
 
 
-        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
+        glClearColor(0.0, 0.0,0.0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
         // ourShader deo
         ourShader.use();
         //pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-        pointLight.position = glm::vec3(0.0,9.6,0.0); // pokolapa se sa trenutnom pozicijom ulicne lampe
+        //pointLight.position = glm::vec3(0.0,9.6,0.0); // pokolapa se sa trenutnom pozicijom ulicne lampe
+        pointLight.position = programState->objectPosition;
+        pointLight.ambient = glm::vec3(0.1*programState->lightGUIColor.r, 0.1 * programState->lightGUIColor.g , 0.1 * programState->lightGUIColor.b);
+        pointLight.diffuse = glm::vec3(0.6*programState->lightGUIColor.r, 0.6 * programState->lightGUIColor.g , 0.6 * programState->lightGUIColor.b);
+        pointLight.specular = glm::vec3(1.0*programState->lightGUIColor.r, 1.0 * programState->lightGUIColor.g , 1.0 * programState->lightGUIColor.b);
 
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -418,21 +431,54 @@ int main() {
         // render the loaded model
         glFrontFace(GL_CW);
         glm::mat4 model = glm::mat4(1.0f);
+
+        /*
+        //model = glm::translate(model,programState->objectPosition); // translate it down so it's at the center of the scene
+        //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.05f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        LampaModel.Draw(ourShader);
+
+
+        model = glm::mat4(1.0f);
         //model = glm::translate(model,programState->objectPosition); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.1f));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
+*/
+
         model = glm::mat4(1.0f);
-        model = glm::translate(model,programState->objectPosition); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.5f));    // it's a bit too big for our scene, so scale it down
+        model = glm::scale(model, glm::vec3(0.5f));
         ourShader.setMat4("model", model);
         podModel.Draw(ourShader);
 
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.0,0.0,8.0));
+        model = glm::scale(model, glm::vec3(6.0f));
+        ourShader.setMat4("model", model);
+        kanapModel.Draw(ourShader);
+
+    /*
+        model = glm::mat4(1.0f);
+        model = model = glm::translate(model,glm::vec3(2.0,0.0,8.0));
+        model = glm::scale(model, glm::vec3(5.0f));
+        ourShader.setMat4("model", model);
+        kanapModel.Draw(ourShader);
+
+        model = glm::mat4(1.0f);
+        model = model = glm::translate(model,glm::vec3(-2.0,0.0,8.0));
+        model = glm::scale(model, glm::vec3(5.0f));
+        ourShader.setMat4("model", model);
+        kanapModel.Draw(ourShader);
+
+
+
         //render plane
-        /*
+
         planeShader.use();
         planeShader.setMat4("projection", projection);
         planeShader.setMat4("view", view);
@@ -442,7 +488,21 @@ int main() {
         planeShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
-        renderPlane(false);*/
+        renderPlane(false);
+
+
+        novaRavanShader.use();
+        novaRavanShader.setMat4("projection", projection);
+        novaRavanShader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.0,5.0,0.0));
+        model = glm::scale(model, glm::vec3(10.0f, 0.1f, 10.0f));
+        novaRavanShader.setMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        renderNewPlane();
+        */
+
 
         //render paintings
 
@@ -506,19 +566,19 @@ int main() {
 
 
         //render lightcube
-        /*lightCubeShader.use();
+        lightCubeShader.use();
         lightCubeShader.setMat4("projection", projection);
         lightCubeShader.setMat4("view", view);
-        lightCubeShader.setVec3("lightColor", glm::vec3 (10.0,0.0,0.0));
+        lightCubeShader.setVec3("lightColor", glm::vec3(programState->lightIntensity)*programState->lightGUIColor);
         model = glm::mat4(1.0f);
         model = glm::translate(model,glm::vec3(0.0,9.6,0.0));
         model = glm::translate(model,programState->objectPosition);
-        model = glm::scale(model, glm::vec3(programState->objectScale - 0.65f));
+        model = glm::scale(model, glm::vec3(0.1f));
         //model = glm::translate(model, pointLight.position);
         lightCubeShader.setMat4("model", model);
 
         renderCube();
-        */
+
 
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -734,6 +794,81 @@ void renderQuad()
 
 }
 
+unsigned int novaRavanVAO = 0;
+unsigned int novaRavanVBO = 0;
+void renderNewPlane()
+{
+    // initialize (if necessary)
+    if (novaRavanVAO == 0)
+    {
+        float vertices[] = {
+                // back face
+                -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+                1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
+                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+                -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+                -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+                // front face
+                -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+                1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+                -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+                -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+                // left face
+                -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+                -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+                -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+                -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+                -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+                -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+                // right face
+                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+                1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right
+                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+                1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left
+                // bottom face
+                -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+                1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+                -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+                -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+                // top face
+                -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+                1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+                1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right
+                1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+                -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+                -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left
+        };
+        glGenVertexArrays(1, &novaRavanVAO);
+        glGenBuffers(1, &novaRavanVBO);
+        // fill buffer
+        glBindBuffer(GL_ARRAY_BUFFER, novaRavanVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        // link vertex attributes
+        glBindVertexArray(novaRavanVAO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    // render Cube
+    glBindVertexArray(novaRavanVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+
+
 unsigned int glassPaneVAO = 0, glassPaneVBO;
 void renderGlassPane()
 {
@@ -860,11 +995,10 @@ void DrawImGui(ProgramState *programState) {
     {
         static float f = 0.0f;
         ImGui::Begin("Hello window");
-        ImGui::Text("Hello text");
-        ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
-        ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Object position", (float*)&programState->objectPosition);
-        ImGui::DragFloat("Object scale", &programState->objectScale, 0.05, 0.1, 4.0);
+        ImGui::Text("Hello TA");
+        ImGui::ColorEdit3("Light color", (float *) &programState->lightGUIColor);
+        ImGui::DragFloat3("Light position", (float*)&programState->objectPosition);
+        ImGui::DragFloat("Light intensity", &programState->lightIntensity, 0.01, 0.01, 20.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);

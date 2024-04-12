@@ -1,0 +1,11 @@
+Model Information:
+* title:	Street Lantern | Game Ready | 4K
+* source:	https://sketchfab.com/3d-models/street-lantern-game-ready-4k-27061fcbbc924b148e06ecd992fca665
+* author:	bralunit (https://sketchfab.com/bral_unit)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Street Lantern | Game Ready | 4K" (https://sketchfab.com/3d-models/street-lantern-game-ready-4k-27061fcbbc924b148e06ecd992fca665) by bralunit (https://sketchfab.com/bral_unit) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
