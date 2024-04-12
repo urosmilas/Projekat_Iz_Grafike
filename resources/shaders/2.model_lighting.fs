@@ -57,6 +57,7 @@ void main()
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
     FragColor = vec4(result, 1.0);
+
 }
 
 vec3 CalDirLight(DirectionLight light, vec3 normal, vec3 viewDir)

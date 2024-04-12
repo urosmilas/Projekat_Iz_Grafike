@@ -51,7 +51,7 @@ unsigned int rboDepth;
 
 
 
-bool Bloom = false;
+bool Bloom = true;
 float exposure = 1.0f;
 
 
@@ -92,7 +92,7 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
     glm::vec3 objectPosition = glm::vec3(0.0f);
-    float lightIntensity = 3.0f;
+    float lightIntensity = 6.0f;
     PointLight pointLight;
     DirectionLight dirLight;
     bool ProtanopiaON = false;
@@ -421,6 +421,7 @@ int main() {
 
 
 
+
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) globalWidth / (float) globalHeight, 0.1f, 100.0f);
@@ -447,9 +448,10 @@ int main() {
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
-*/
 
+*/
         model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0,-100.0,0.0));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.5f));
         ourShader.setMat4("model", model);
@@ -490,18 +492,35 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         renderPlane(false);
 
-
+        */
         novaRavanShader.use();
+
+        novaRavanShader.setVec3("pointLight.position", pointLight.position);
+        novaRavanShader.setVec3("pointLight.ambient", pointLight.ambient);
+        novaRavanShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        novaRavanShader.setVec3("pointLight.specular", pointLight.specular);
+        novaRavanShader.setFloat("pointLight.constant", pointLight.constant);
+        novaRavanShader.setFloat("pointLight.linear", pointLight.linear);
+        novaRavanShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        novaRavanShader.setVec3("viewPosition", programState->camera.Position);
+        novaRavanShader.setFloat("material.shininess", 32.0f);
+
+
+        novaRavanShader.setVec3("dirLight.direction", dirLight.direction);
+        novaRavanShader.setVec3("dirLight.ambient", dirLight.ambient);
+        novaRavanShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        novaRavanShader.setVec3("dirLight.specular", dirLight.specular);
+
         novaRavanShader.setMat4("projection", projection);
         novaRavanShader.setMat4("view", view);
         model = glm::mat4(1.0f);
-        model = glm::translate(model,glm::vec3(0.0,5.0,0.0));
-        model = glm::scale(model, glm::vec3(10.0f, 0.1f, 10.0f));
+        //model = glm::translate(model,glm::vec3(0.0,0.0,0.0));
+        model = glm::scale(model, glm::vec3(100.0f, 0.01f, 100.0f));
         novaRavanShader.setMat4("model", model);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         renderNewPlane();
-        */
+
 
 
         //render paintings
